@@ -1,0 +1,64 @@
+<configuration xmlns:patch="http://www.sitecore.net/xmlconfig/">
+  <sitecore>
+    <contentSearch>
+      <!-- ensure that this list of tiles aligns with the tiles you want to support in your tenant site 
+	       You should have a computed field which calls out each tile by name.
+	  -->
+	  <indexConfigurations>
+        <scoreSolrConfiguration type="Sitecore.ContentSearch.SolrProvider.SolrIndexConfiguration, Sitecore.ContentSearch.SolrProvider">
+          <documentOptions type="Sitecore.ContentSearch.SolrProvider.SolrDocumentBuilderOptions, Sitecore.ContentSearch.SolrProvider">
+            <fields hint="raw:AddComputedIndexField">
+              <field fieldName="default tile" tileName="default" siteContext="sc821solr" returnType="string">Score.Custom.Indexing.PreviewField, Score.Custom</field>
+              <field fieldName="search result tile" tileName="Search Result" siteContext="sc821solr" returnType="string">Score.Custom.Indexing.PreviewField, Score.Custom</field>
+              <field fieldName="autocomplete tile" tileName="Autocomplete" siteContext="sc821solr" returnType="string">Score.Custom.Indexing.PreviewField, Score.Custom</field>
+            </fields>
+          </documentOptions>
+        </scoreSolrConfiguration>
+      </indexConfigurations>
+	  
+	  <!-- introduce a new index per tenant, per database
+		   replace "TENANT_INDEX_NAME_master" and "TENANT_INDEX_NAME_web" with the name of your tenant accordingly
+		   You should also ensure that the <root> element of each index correctly calls out your tenant for crawling purposes.
+           Additionally, you will need to introduce a new SOLR Core for each index that you call out here. 
+		   Finally, you will need to introduce logic to the -->
+      <configuration type="Sitecore.ContentSearch.ContentSearchConfiguration, Sitecore.ContentSearch">
+        <indexes hint="list:AddIndex">
+          <index id="TENANT_INDEX_NAME_master" type="Sitecore.ContentSearch.SolrProvider.SolrSearchIndex, Sitecore.ContentSearch.SolrProvider">
+            <param desc="name">$(id)</param>
+            <param desc="core">$(id)</param>
+            <param desc="propertyStore" ref="contentSearch/indexConfigurations/databasePropertyStore" param1="$(id)" />
+            <configuration ref="contentSearch/indexConfigurations/scoreSolrConfiguration" />
+            <strategies hint="list:AddStrategy">
+              <strategy ref="contentSearch/indexConfigurations/indexUpdateStrategies/syncMaster" />
+            </strategies>
+            <locations hint="list:AddCrawler">
+              <crawler type="Sitecore.ContentSearch.SitecoreItemCrawler, Sitecore.ContentSearch">
+                <Database>master</Database>
+                <Root>/sitecore/content/TENANT_ROOT</Root>
+              </crawler>
+            </locations>
+            <enableItemLanguageFallback>false</enableItemLanguageFallback>
+            <enableFieldLanguageFallback>false</enableFieldLanguageFallback>
+          </index>
+		  <index id="TENANT_INDEX_NAME_web" type="Sitecore.ContentSearch.SolrProvider.SolrSearchIndex, Sitecore.ContentSearch.SolrProvider">
+            <param desc="name">$(id)</param>
+            <param desc="core">$(id)</param>
+            <param desc="propertyStore" ref="contentSearch/indexConfigurations/databasePropertyStore" param1="$(id)" />
+            <configuration ref="contentSearch/indexConfigurations/scoreSolrConfiguration" />
+            <strategies hint="list:AddStrategy">
+              <strategy ref="contentSearch/indexConfigurations/indexUpdateStrategies/onPublishEndAsync" />
+            </strategies>
+            <locations hint="list:AddCrawler">
+              <crawler type="Sitecore.ContentSearch.SitecoreItemCrawler, Sitecore.ContentSearch">
+                <Database>web</Database>
+                <Root>/sitecore/content/TENANT_ROOT</Root>
+              </crawler>
+            </locations>
+            <enableItemLanguageFallback>false</enableItemLanguageFallback>
+            <enableFieldLanguageFallback>false</enableFieldLanguageFallback>
+          </index>
+        </indexes>
+      </configuration>
+    </contentSearch>
+  </sitecore>
+</configuration>
